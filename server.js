@@ -34,13 +34,12 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
-app.use(
-  cors({
-    origin: process.env.ALLOWED_ORIGIN || "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
-  })
-);
+const allowedOrigins = process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim());
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  credentials: true
+}));
 
 // Body parsing middleware
 app.use(express.json());
@@ -48,8 +47,14 @@ app.use(express.json());
 // Data sanitization
 app.use(mongoSanitize());
 
+// Health check route (public)
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", time: Date.now() });
+});
+
 // API routes
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/services", require("./routes/serviceRoutes"));
