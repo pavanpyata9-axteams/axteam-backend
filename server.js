@@ -1,5 +1,5 @@
-import cors from "cors";
-
+const express = require("express");
+const cors = require("cors");
 app.use(cors({
     origin: [
         "https://axteam-frontend-new.onrender.com",
