@@ -1,3 +1,18 @@
+import cors from "cors";
+
+app.use(cors({
+    origin: [
+        "https://axteam-frontend-new.onrender.com",
+        "http://localhost:5173",
+        "http://localhost:3000"
+    ],
+    methods: "GET,POST,PUT,DELETE,OPTIONS",
+    credentials: true,
+    allowedHeaders: "Content-Type,Authorization"
+}));
+
+app.options("*", cors()); // Fix preflight CORS
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
