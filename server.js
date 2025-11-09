@@ -1,152 +1,61 @@
-const express = require("express");
-const cors = require("cors");
-app.use(cors({
-    origin: [
-        "https://axteam-frontend-new.onrender.com",
-        "http://localhost:5173",
-        "http://localhost:3000"
-    ],
-    methods: "GET,POST,PUT,DELETE,OPTIONS",
-    credentials: true,
-    allowedHeaders: "Content-Type,Authorization"
-}));
-
-app.options("*", cors()); // Fix preflight CORS
-
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss');
-require('dotenv').config();
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const path = require('path');
 
-// Validate required environment variables on startup
-const requiredEnvVars = [
-  'MONGODB_URI',
-  'JWT_SECRET',
-  'WHATSAPP_API_KEY',
-  'ADMIN_WHATSAPP_NUMBER',
-  'SUPPORT_WHATSAPP_NUMBER'
-];
-
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-if (missingEnvVars.length > 0) {
-  console.error('❌ Missing required environment variables:', missingEnvVars.join(', '));
-  console.error('⚠️  Please check your .env file configuration');
-  // Don't exit in development, but warn
-  if (process.env.NODE_ENV === 'production') {
-    process.exit(1);
-  }
-}
-
-// Import routes
-const authRoutes = require('./routes/authRoutes');
-const bookingRoutes = require('./routes/bookingRoutes');
-const serviceRoutes = require('./routes/serviceRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const reviewRoutes = require('./routes/reviewRoutes');
-
-// Import database connection
-const connectDB = require('./config/db');
+dotenv.config();
 
 const app = express();
 
-// Connect to database
-connectDB();
+// Trust proxy for Render deployment
+app.set("trust proxy", 1);
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('📦 MongoDB Connected successfully');
+  })
+  .catch((error) => {
+    console.error('❌ MongoDB connection error:', error.message);
+  });
 
 // Security middleware
-app.use(
-  helmet({
-    crossOriginResourcePolicy: false,
-  })
-);
-app.disable('x-powered-by');
+app.use(helmet());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
 });
 app.use(limiter);
 
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGIN?.split(",") || "*",
-    credentials: true,
+    origin: process.env.ALLOWED_ORIGIN || "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   })
 );
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json());
 
 // Data sanitization
 app.use(mongoSanitize());
-app.use((req, res, next) => {
-  if (req.body) req.body = JSON.parse(xss(JSON.stringify(req.body)));
-  next();
-});
 
 // API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/services', serviceRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/reviews', reviewRoutes);
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/bookings", require("./routes/bookingRoutes"));
+app.use("/api/reviews", require("./routes/reviewRoutes"));
+app.use("/api/services", require("./routes/serviceRoutes"));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'AX TEAM Backend is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
-  });
-});
-
-// Welcome endpoint
-app.get('/', (req, res) => {
-  res.status(200).json({
-    message: 'Welcome to AX TEAM Home Services API',
-    version: '1.0.0',
-    docs: '/api/docs',
-    health: '/health'
-  });
-});
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
-  
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({
-      success: false,
-      message: 'CORS policy violation'
-    });
-  }
-  
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
-  });
-});
+// Fallback root route
+app.get("/", (req, res) => res.send("Backend Running"));
 
 const PORT = process.env.PORT || 5000;
 
