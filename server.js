@@ -34,7 +34,10 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim());
+const allowedOrigins = process.env.ALLOWED_ORIGIN ? 
+  process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim()) : 
+  ["https://axteam-frontend-new.onrender.com", "http://localhost:5173"];
+
 app.use(cors({
   origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -46,6 +49,9 @@ app.use(express.json());
 
 // Data sanitization
 app.use(mongoSanitize());
+
+// Static file serving for uploads
+app.use('/uploads', express.static('uploads'));
 
 // Health check route (public)
 app.get("/health", (req, res) => {
