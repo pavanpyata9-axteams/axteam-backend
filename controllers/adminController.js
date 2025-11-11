@@ -775,8 +775,8 @@ const assignTechnician = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Technician assigned successfully and notifications sent',
-      data: { booking }
+      message: 'Technician assigned successfully',
+      updatedBooking: booking
     });
 
   } catch (error) {
