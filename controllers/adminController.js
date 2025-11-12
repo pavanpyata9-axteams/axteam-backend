@@ -698,7 +698,7 @@ const getAllEnhancedBookings = async (req, res) => {
 // Assign Technician with Notifications
 const assignTechnician = async (req, res) => {
   try {
-    const { bookingId } = req.params;
+    const { id: bookingId } = req.params;
     const { technicianName, technicianPhone, technicianEmail } = req.body;
     const adminId = req.user._id;
 
