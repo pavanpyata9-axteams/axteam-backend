@@ -34,13 +34,9 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGIN ? 
-  process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim()) : 
-  ["https://axteam-frontend-new.onrender.com", "http://localhost:5173"];
-
 app.use(cors({
-  origin: allowedOrigins,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  origin: process.env.ALLOWED_ORIGIN || "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
@@ -50,17 +46,8 @@ app.use(express.json());
 // Data sanitization
 app.use(mongoSanitize());
 
-// Static file serving for uploads
-app.use('/uploads', express.static('uploads'));
-
-// Health check route (public)
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", time: Date.now() });
-});
-
 // API routes
 app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/services", require("./routes/serviceRoutes"));
@@ -72,6 +59,4 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-}).on("error", (err) => {
-  console.error("❌ Server failed:", err.message);
 });
