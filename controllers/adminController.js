@@ -698,94 +698,33 @@ const getAllEnhancedBookings = async (req, res) => {
 // Assign Technician with Notifications
 const assignTechnician = async (req, res) => {
   try {
-    const { id: bookingId } = req.params;
+    const { id } = req.params;
     const { technicianName, technicianPhone, technicianEmail } = req.body;
-    const adminId = req.user._id;
-
-    console.log('👨‍🔧 [Admin] Assigning technician:', { bookingId, technicianName, technicianPhone });
 
     if (!technicianName || !technicianPhone) {
-      return res.status(400).json({
-        success: false,
-        message: 'Technician name and phone are required'
-      });
+      return res.status(400).json({ success: false, message: 'Technician name and phone required' });
     }
 
-    const booking = await Booking.findById(bookingId).populate('userId', 'name email phone');
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: 'Booking not found'
-      });
-    }
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-    booking.technician = {
-      name: technicianName,
-      phone: technicianPhone,
-      email: technicianEmail || null,
-      assignedAt: new Date(),
-      assignedBy: adminId
-    };
-
-    if (booking.status === 'Pending') {
-      booking.status = 'Confirmed';
-    }
-
+    booking.technician = { name: technicianName, phone: technicianPhone, email: technicianEmail };
+    booking.hasTechnician = true;
+    booking.status = 'Confirmed';
     await booking.save();
 
-    // Send notifications
+    // Send WhatsApp message
     try {
-      const customerMessage = `🔧 AX TEAM Update\n\nHi ${booking.name},\n\nTechnician assigned for your service!\n\n👨‍🔧 Technician: ${technicianName}\n📞 Phone: ${technicianPhone}\n📅 Date: ${booking.date.toDateString()}\n⏰ Time: ${booking.time}\n🏠 Service: ${booking.services.map(s => s.serviceName).join(', ')}\n\nThe technician will contact you soon.`;
-      
-      await sendSMS(booking.phone, customerMessage);
-      
-      await sendEmail(booking.email, 'Technician Assigned - AX TEAM', `
-        <h2>Technician Assigned!</h2>
-        <p>Hi ${booking.name},</p>
-        <p>We have assigned a technician for your service:</p>
-        <ul>
-          <li><strong>Technician:</strong> ${technicianName}</li>
-          <li><strong>Phone:</strong> ${technicianPhone}</li>
-          <li><strong>Service Date:</strong> ${booking.date.toDateString()}</li>
-          <li><strong>Time:</strong> ${booking.time}</li>
-          <li><strong>Service:</strong> ${booking.services.map(s => s.serviceName).join(', ')}</li>
-        </ul>
-        <p>The technician will contact you shortly.</p>
-        <p>Best regards,<br>AX TEAM</p>
-      `);
-
-      const techMessage = `🔧 AX TEAM - New Assignment\n\nHi ${technicianName},\n\nNew service assigned to you:\n\n👤 Customer: ${booking.name}\n📞 Phone: ${booking.phone}\n📍 Address: ${booking.address.street}, ${booking.address.city}\n📅 Date: ${booking.date.toDateString()}\n⏰ Time: ${booking.time}\n🔧 Service: ${booking.services.map(s => s.serviceName).join(', ')}\n\nPlease contact customer to confirm.`;
-      
-      await sendSMS(technicianPhone, techMessage);
-
-      if (process.env.ADMIN_WHATSAPP) {
-        const adminMessage = `📋 AX TEAM - Technician Assigned\n\n✅ Assignment Complete:\n👨‍🔧 Tech: ${technicianName}\n👤 Customer: ${booking.name}\n📞 Customer: ${booking.phone}\n📍 ${booking.address.street}, ${booking.address.city}\n📅 ${booking.date.toDateString()} at ${booking.time}\n🔧 ${booking.services.map(s => s.serviceName).join(', ')}\n\nBooking ID: ${booking.bookingId}`;
-        await sendSMS(process.env.ADMIN_WHATSAPP, adminMessage);
-      }
-
-      booking.notifications.customerNotified = true;
-      booking.notifications.technicianNotified = true;
-      booking.notifications.adminNotified = true;
-      booking.notifications.lastNotificationSent = new Date();
-      await booking.save();
-
+      const sendWhatsApp = require('../utils/sendWhatsApp');
+      await sendWhatsApp.sendBookingStatusWhatsApp(booking, 'Technician Assigned');
     } catch (notificationError) {
-      console.error('⚠️ [Admin] Notification error:', notificationError);
+      console.error('⚠️ [assignTechnician] WhatsApp notification error:', notificationError);
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Technician assigned successfully',
-      updatedBooking: booking
-    });
-
+    res.json({ success: true, message: 'Technician assigned successfully', booking });
   } catch (error) {
-    console.error('❌ [Admin] Assign technician error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to assign technician',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    console.error('❌ [assignTechnician]', error);
+    res.status(500).json({ success: false, message: 'Server error assigning technician', error: error.message });
   }
 };
 
