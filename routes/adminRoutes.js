@@ -77,11 +77,11 @@ router.get('/stats/enhanced', authMiddleware, adminMiddleware, getEnhancedStats)
 router.get('/bookings/enhanced', authMiddleware, adminMiddleware, getAllEnhancedBookings);
 
 /**
- * @route   POST /api/admin/bookings/:bookingId/assign-technician
+ * @route   POST /api/admin/bookings/:id/assign-technician
  * @desc    Assign technician to booking with notifications
  * @access  Private (Admin)
  */
-router.post('/bookings/:bookingId/assign-technician', authMiddleware, adminMiddleware, assignTechnician);
+router.post('/bookings/:id/assign-technician', authMiddleware, adminMiddleware, assignTechnician);
 
 /**
  * @route   GET /api/admin/export/bookings
