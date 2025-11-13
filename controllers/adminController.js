@@ -698,33 +698,82 @@ const getAllEnhancedBookings = async (req, res) => {
 // Assign Technician with Notifications
 const assignTechnician = async (req, res) => {
   try {
+    console.log('🔧 [assignTechnician] Starting technician assignment...');
+    console.log('📝 [assignTechnician] Request params:', req.params);
+    console.log('📝 [assignTechnician] Request body:', req.body);
+
     const { id } = req.params;
     const { technicianName, technicianPhone, technicianEmail } = req.body;
 
+    // Validate required fields
     if (!technicianName || !technicianPhone) {
-      return res.status(400).json({ success: false, message: 'Technician name and phone required' });
+      console.error('❌ [assignTechnician] Missing required fields');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Technician name and phone are required' 
+      });
     }
 
+    // Find the booking
+    console.log('🔍 [assignTechnician] Finding booking with ID:', id);
     const booking = await Booking.findById(id);
-    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (!booking) {
+      console.error('❌ [assignTechnician] Booking not found:', id);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Booking not found' 
+      });
+    }
 
-    booking.technician = { name: technicianName, phone: technicianPhone, email: technicianEmail };
+    console.log('✅ [assignTechnician] Booking found:', booking.bookingId);
+
+    // Update booking with technician info
+    booking.technician = { 
+      name: technicianName, 
+      phone: technicianPhone, 
+      email: technicianEmail || '',
+      assignedAt: new Date(),
+      assignedBy: req.user._id
+    };
     booking.hasTechnician = true;
     booking.status = 'Confirmed';
-    await booking.save();
 
-    // Send WhatsApp message
+    // Save the booking
+    console.log('💾 [assignTechnician] Saving booking updates...');
+    await booking.save();
+    console.log('✅ [assignTechnician] Booking saved successfully');
+
+    // Send WhatsApp notification
     try {
+      console.log('📱 [assignTechnician] Sending WhatsApp notification...');
       const sendWhatsApp = require('../utils/sendWhatsApp');
       await sendWhatsApp.sendBookingStatusWhatsApp(booking, 'Technician Assigned');
+      console.log('✅ [assignTechnician] WhatsApp notification sent');
     } catch (notificationError) {
       console.error('⚠️ [assignTechnician] WhatsApp notification error:', notificationError);
+      // Don't fail the whole operation if notification fails
     }
 
-    res.json({ success: true, message: 'Technician assigned successfully', booking });
+    console.log('🎉 [assignTechnician] Technician assignment completed successfully');
+    
+    // Return success response
+    res.status(200).json({ 
+      success: true, 
+      message: 'Technician assigned successfully', 
+      data: {
+        bookingId: booking.bookingId,
+        technician: booking.technician,
+        status: booking.status,
+        hasTechnician: booking.hasTechnician
+      }
+    });
   } catch (error) {
-    console.error('❌ [assignTechnician]', error);
-    res.status(500).json({ success: false, message: 'Server error assigning technician', error: error.message });
+    console.error('❌ [assignTechnician] Server error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error assigning technician', 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
