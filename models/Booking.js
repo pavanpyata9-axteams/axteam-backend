@@ -183,7 +183,10 @@ const bookingSchema = new mongoose.Schema({
       lowercase: true,
       validate: {
         validator: function(v) {
-          return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+          // Skip validation for empty, null, undefined, or "na"
+          if (!v || v === "" || v === "na") return true;
+          // Otherwise validate as email
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
         },
         message: 'Please provide a valid technician email'
       }
