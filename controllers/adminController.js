@@ -98,7 +98,7 @@ const getAdminStats = async (req, res) => {
       .populate('services.serviceId', 'name category')
       .sort({ createdAt: -1 })
       .limit(10)
-      .select('bookingId name phone status date createdAt');
+      .select('bookingId name phone status date createdAt technician hasTechnician');
 
     // Booking trends (last 7 days)
     const bookingTrends = await Booking.aggregate([
@@ -262,6 +262,8 @@ const getAdminBookings = async (req, res) => {
             date: { $first: '$date' },
             time: { $first: '$time' },
             status: { $first: '$status' },
+            technician: { $first: '$technician' },
+            hasTechnician: { $first: '$hasTechnician' },
             createdAt: { $first: '$createdAt' },
             updatedAt: { $first: '$updatedAt' }
           }
@@ -701,28 +703,48 @@ const assignTechnician = async (req, res) => {
     const { technicianName, technicianPhone, technicianEmail } = req.body;
 
     if (!technicianName || !technicianPhone) {
-      return res.status(400).json({ success:false, message:"Missing technician details" });
+      return res.status(400).json({ success: false, message: "Missing technician details" });
     }
 
     const booking = await Booking.findById(id);
-    if (!booking) return res.status(404).json({ success:false, message:"Booking not found" });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
 
+    // Update technician info - email can be empty, null, or "na"
     booking.technician = {
-      name: technicianName,
-      phone: technicianPhone,
-      email: technicianEmail || "",
+      name: technicianName.trim(),
+      phone: technicianPhone.trim(),
+      email: technicianEmail && technicianEmail.trim() !== "" ? technicianEmail.trim() : "",
       assignedAt: new Date(),
       assignedBy: req.user?._id
     };
 
     booking.status = "Confirmed";
+    booking.hasTechnician = true;
+
     await booking.save();
 
-    return res.json({ success:true, message:"Technician assigned", booking });
+    // Return updated booking with technician included
+    return res.status(200).json({ 
+      success: true, 
+      message: "Technician assigned successfully", 
+      booking: {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        status: booking.status,
+        hasTechnician: booking.hasTechnician,
+        technician: booking.technician
+      }
+    });
 
   } catch (error) {
     console.error("assignTechnician error:", error);
-    return res.status(500).json({ success:false, message:"Server error", error: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error", 
+      error: error.message 
+    });
   }
 };
 
