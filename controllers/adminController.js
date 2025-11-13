@@ -711,13 +711,11 @@ const assignTechnician = async (req, res) => {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
-    // Update technician info - email can be empty, null, or "na"
     booking.technician = {
-      name: technicianName.trim(),
-      phone: technicianPhone.trim(),
-      email: technicianEmail && technicianEmail.trim() !== "" ? technicianEmail.trim() : "",
+      name: technicianName,
+      phone: technicianPhone,
+      email: technicianEmail || "",
       assignedAt: new Date(),
-      assignedBy: req.user?._id
     };
 
     booking.status = "Confirmed";
