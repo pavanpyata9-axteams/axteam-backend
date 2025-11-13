@@ -89,6 +89,7 @@ try {
   app.use("/api/bookings", require("./routes/bookingRoutes"));
   app.use("/api/reviews", require("./routes/reviewRoutes"));
   app.use("/api/services", require("./routes/serviceRoutes"));
+  app.use("/api/gallery", require("./routes/galleryRoutes"));
   console.log('✅ API routes loaded');
 } catch (error) {
   console.error('❌ Route loading error:', error.message);
