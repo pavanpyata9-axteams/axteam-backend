@@ -95,6 +95,22 @@ try {
   console.error('❌ Route loading error:', error.message);
 }
 
+// Initialize Twilio (optional - don't crash if missing)
+try {
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    const twilio = require('twilio');
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    console.log('✅ Twilio initialized');
+    global.twilioClient = client;
+  } else {
+    console.log('⚠️ Twilio disabled - missing credentials');
+    global.twilioClient = null;
+  }
+} catch (error) {
+  console.log('⚠️ Twilio disabled:', error.message);
+  global.twilioClient = null;
+}
+
 // Server startup
 const PORT = process.env.PORT || 5000;
 
