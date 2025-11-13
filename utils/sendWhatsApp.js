@@ -130,12 +130,14 @@ Please assign a technician ASAP.`;
 /**
  * Send booking status update WhatsApp to customer
  * @param {Object} booking - Booking details
+ * @param {string} customStatus - Optional custom status for special messages
  */
-const sendBookingStatusWhatsApp = async (booking) => {
+const sendBookingStatusWhatsApp = async (booking, customStatus = null) => {
   try {
     let message = '';
+    const statusToCheck = customStatus || booking.status;
     
-    switch (booking.status) {
+    switch (statusToCheck) {
       case 'Confirmed':
         message = `✅ AX TEAM - Booking Confirmed
 
@@ -148,6 +150,23 @@ Service: ${booking.services.map(s => s.serviceName).join(', ')}
 Address: ${booking.address.street}, ${booking.address.city}
 
 Thank you for choosing AX TEAM!`;
+        break;
+        
+      case 'Technician Assigned':
+        message = `👨‍🔧 AX TEAM - Technician Assigned
+
+Hello ${booking.name},
+Great news! A technician has been assigned to your booking ${booking.bookingId}.
+
+${booking.technician ? `👤 Technician: ${booking.technician.name}
+📞 Contact: ${booking.technician.phone}` : ''}
+
+📅 Date: ${new Date(booking.date).toLocaleDateString('en-IN')}
+⏰ Time: ${booking.time}
+🛠️ Service: ${booking.services.map(s => s.serviceName).join(', ')}
+📍 Address: ${booking.address.street}, ${booking.address.city}
+
+Our technician will arrive on time. Thank you for choosing AX TEAM!`;
         break;
         
       case 'InProgress':
