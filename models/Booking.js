@@ -133,7 +133,7 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Confirmed', 'Completed'],
+    enum: ['Pending', 'Confirmed', 'InProgress', 'Completed', 'Cancelled'],
     default: 'Pending'
   },
   estimatedCost: {
@@ -219,6 +219,10 @@ const bookingSchema = new mongoose.Schema({
   },
   adminReplyDate: {
     type: Date
+  },
+  hasTechnician: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
